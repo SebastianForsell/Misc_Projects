@@ -1,0 +1,36 @@
+﻿1
+----
+Det första jag märkte var att namnkonventionen behövdes ändras till något mer läsbart. Det var alldeles för mycket kommentarer i koden, helst ska dessa användas om något inte är klartydligt från koden i sig. Om kommentarerna var för att förklara koden mer åt mig, så står jag fortfarande vid att kommentarer ska användas sällan.
+"DoMailWork" säger inte mycket direkt förutom att den gör något med mejl.
+De 2 metoderna som har hand om mejlskickningen gjorde jag om till en metod, för att båda göra samma funktion; namngav det SendMailBatch för att bättre representera metoden.
+If-satsen för söndagskollen hade Monday skriven, när det skulle vara Sunday.
+
+Implementerade klasserna från ett interface, WelcomeMail och ComebackMail. Interfacet beskriver allt man behöver för att skicka en mail batch, klassernas implementationer beskriver de specifika mejltyperna som skickas. Detta tillåter vidareutveckling av flera mejltyper utan att behöva göra stora ändringar.
+Båda klasserna hämtar mejltypen, kundlista och meddelandet. ComebackMail lägger till voucher via en enkel konstruktorparameter.  
+Kunderna hämtas via LINQ för jag anser att det gör den lätt läsbar utan att behöva skriva fler rader.
+SendMailBatch-metoden startar en ny instans av SmtpClient och sedan försöker hämta kundmejl, går igenom alla mejlen med att hämta meddelandet för varje kund och skickar den.
+
+Ett stort logikfel jag också upptäckte var hur den hanterar när mejl har lyckats skicka eller inte.
+Detta ledde till att även om WelcomeMail lyckades så kommer den visa att det blev fel om ComebackMail inte lyckas, alltså det blev fel även om den första lyckades eftersom bool värdet skrevs över av det senaste värdet.
+Jag gjorde om det så att andra gången success blir tilldelad boolvärde, så tar den både nuvarande värdet och värdet från CombackMailBatch.
+If-satserna kollade om en bool var sant eller falskt, detta är onödigt eftersom boolen är redan antingen sant eller falskt.
+
+Ett problem med mejlskickningen som man fick tänka på är, hur ska felhanteringen gå?
+Ska den skicka allt och sedan lista ut alla mejl som gick fel?
+Ska den stanna så fort något mejl gick fel?
+Lösningen här som jag föredrog var att den skickar allt den kan och sedan listar felmeddelande på de mejltyper som inte gick att skicka.
+Att stanna av hela processen på det första mejlet som går fel är inte praktiskt, därför implementerade jag en try-catch som försöker skicka båda typerna för sig.
+Catchen skriver ut vilken mejltyp som gick fel samt felmeddelandet, sedan skickar tillbaka misslyckande.
+Smtp-instansen behövs dispose när den inte används, fullbordade try-catch med finally så att man garanterar att den instansen stängs av.
+
+loopen som går igenom all kunder ändras till foreach för lättläslighet.
+Det går lika bra med en for-loop, men jag föredrar foreach för att den är bra anpassat för att gå igenom listor.
+Däremot så finns det en fördel med for loopen då om typen du går igenom har en dynamisk räckvidd, då foreach kan inte hantera ändringen så särkilt bra medans den körs.
+
+
+2
+----
+Om jag skulle bygga applikationen från grunden, skulle jag hämta data från databasen med hjälp av LINQ. Använda interface för att kunna ha olika mejltyper, meddelanden etc.
+Foreach loopen som har hand om mejlskickningen vill jag ändra till att den gör try catch på varje mejl. 
+En lösning på det som jag föredrar är att man har en "MailSent" bool på varje användare i databasen eller liknande som då bockar av vilka som mejlen har skickats till. På så sätt, kan man analysera felen allt efter som de dyker upp och loggar till en lista eller databas, och fixa problemen tills nästa skickning.
+En annan lösning är att man låter den vara i en loop och försöker skicka mejlen igen efter en viss tid. Men detta skulle vara mer som en service och inte en applikation som körs 1 gång om dagen.
